@@ -1,0 +1,61 @@
+{{define "content"}}
+<section>
+  <a href="/" class="text-xs text-slate-500 hover:underline">← all threads</a>
+
+  <div class="mb-4 mt-2 flex items-baseline justify-between">
+    <h1 class="text-2xl font-semibold tracking-tight">{{.Thread.Label}}</h1>
+    <a href="{{.GitHubURL}}" class="text-sm text-slate-500 hover:underline" target="_blank" rel="noopener">
+      {{.Thread.Owner}}/{{.Thread.Repo}}#{{.Thread.Number}}
+    </a>
+  </div>
+
+  <div class="mb-6 flex items-center text-sm text-slate-600">
+    <span class="mr-4">Kind: <span class="font-mono text-slate-900">{{.Thread.Kind}}</span></span>
+    <span class="mr-4">State:
+      {{if eq .Thread.State "open"}}
+        <span class="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">open</span>
+      {{else if eq .Thread.State "closed"}}
+        <span class="inline-flex items-center rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800">closed</span>
+      {{else if eq .Thread.State "merged"}}
+        <span class="inline-flex items-center rounded-full bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-800">merged</span>
+      {{else}}
+        <span class="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">{{.Thread.State}}</span>
+      {{end}}
+    </span>
+    {{if .Thread.LastEventAt}}
+      <span class="mr-4">Last event: <span class="font-mono">{{.Thread.LastEventAt.Format "2006-01-02 15:04 UTC"}}</span></span>
+    {{end}}
+  </div>
+
+  <h2 class="mb-3 text-sm font-medium uppercase tracking-wide text-slate-500">Timeline ({{len .Events}} events)</h2>
+
+  {{if .Events}}
+  <ol class="space-y-3">
+    {{range .Events}}
+    <li class="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+      <div class="flex items-baseline justify-between">
+        <div class="text-sm">
+          <span class="font-medium text-slate-900">{{.Actor}}</span>
+          <span class="text-slate-500"> · </span>
+          <span class="font-mono text-xs text-slate-600">{{.EventType}}</span>
+          <span class="text-slate-500"> · </span>
+          <span class="font-mono text-xs text-slate-500">{{.OccurredAt.Format "2006-01-02 15:04 UTC"}}</span>
+        </div>
+        {{if .URL}}
+          <a href="{{.URL}}" target="_blank" rel="noopener" class="text-xs text-slate-500 hover:underline">view on github</a>
+        {{end}}
+      </div>
+      {{if .BodyExcerpt}}
+        <p class="mt-2 text-sm text-slate-700">{{.BodyExcerpt}}</p>
+      {{end}}
+    </li>
+    {{end}}
+  </ol>
+  {{else}}
+    <div class="rounded-lg border border-dashed border-slate-300 bg-white p-8 text-center text-slate-500">
+      <p class="text-sm">No events recorded yet.</p>
+      <p class="mt-2 text-xs">The poller will fetch from GitHub on its next tick.</p>
+    </div>
+  {{end}}
+</section>
+{{end}}

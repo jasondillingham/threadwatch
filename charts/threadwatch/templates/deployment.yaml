@@ -49,6 +49,14 @@ spec:
               value: "/etc/threadwatch/threads.yaml"
             - name: POLL_INTERVAL
               value: {{ .Values.config.pollInterval | quote }}
+            {{- if .Values.github.existingSecret }}
+            - name: GITHUB_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.github.existingSecret }}
+                  key: {{ .Values.github.tokenKey | default "token" }}
+                  optional: true
+            {{- end }}
           {{- if .Values.probes.enabled }}
           livenessProbe:
             httpGet:

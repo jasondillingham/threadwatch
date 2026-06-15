@@ -1,5 +1,3 @@
-{{define "title"}}Tracked threads{{end}}
-
 {{define "content"}}
 <section>
   <div class="mb-6 flex items-baseline justify-between">
@@ -24,7 +22,9 @@
       <tbody class="divide-y divide-slate-200">
         {{range .Threads}}
         <tr class="hover:bg-slate-50">
-          <td class="px-4 py-3 font-medium text-slate-900">{{.Label}}</td>
+          <td class="px-4 py-3 font-medium text-slate-900">
+            <a href="/threads/{{.ID}}" class="hover:underline">{{.Label}}</a>
+          </td>
           <td class="px-4 py-3 text-slate-600">{{.Owner}}/{{.Repo}}</td>
           <td class="px-4 py-3 text-right font-mono text-slate-600">
             <a class="hover:underline" href="https://github.com/{{.Owner}}/{{.Repo}}/issues/{{.Number}}">{{.Number}}</a>

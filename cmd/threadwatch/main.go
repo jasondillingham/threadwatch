@@ -1,15 +1,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // Command threadwatch is a self-hosted GitHub thread monitor.
-//
-// V1 polls a configured list of issues and pull requests on a schedule
-// and surfaces new activity (comments, reviews, state changes) via a
-// small web UI and JSON API. See README.md for the design.
 package main
 
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
@@ -17,12 +14,13 @@ import (
 	"time"
 
 	"github.com/jasondillingham/threadwatch/internal/config"
+	"github.com/jasondillingham/threadwatch/internal/github"
 	"github.com/jasondillingham/threadwatch/internal/httpserver"
 	"github.com/jasondillingham/threadwatch/internal/obs"
+	"github.com/jasondillingham/threadwatch/internal/poller"
 	"github.com/jasondillingham/threadwatch/internal/storage"
 )
 
-// Build-time metadata, set via -ldflags.
 var (
 	version   = "dev"
 	commit    = "unknown"
@@ -42,11 +40,14 @@ func main() {
 		"listen", cfg.ListenAddr, "db", cfg.DatabasePath,
 		"threads_config", cfg.ThreadsPath, "threads_declared", len(cfg.Threads),
 		"poll_interval", cfg.PollInterval,
+		"github_token_set", cfg.GitHubToken != "",
+		"refresh_endpoint_enabled", cfg.RefreshToken != "",
 	)
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
+	// Storage.
 	db, err := storage.Open(ctx, cfg.DatabasePath)
 	if err != nil {
 		logger.Error("storage open", "err", err)
@@ -54,13 +55,10 @@ func main() {
 	}
 	defer func() { _ = db.Close() }()
 
-	// Reconcile the declared threads with the DB. Idempotent.
+	// Reconcile declared threads with the DB. Idempotent.
 	for _, t := range cfg.Threads {
 		if _, err := db.UpsertThread(ctx, storage.Thread{
-			Label:  t.Label,
-			Owner:  t.Owner,
-			Repo:   t.Repo,
-			Number: t.Number,
+			Label: t.Label, Owner: t.Owner, Repo: t.Repo, Number: t.Number,
 		}); err != nil {
 			logger.Error("upsert thread", "owner", t.Owner, "repo", t.Repo, "number", t.Number, "err", err)
 			os.Exit(1)
@@ -68,7 +66,18 @@ func main() {
 	}
 	logger.Info("threads reconciled", "count", len(cfg.Threads))
 
-	srv, err := httpserver.New(db, logger, version)
+	// Metrics.
+	metrics := obs.NewMetrics()
+
+	// GitHub client.
+	ua := fmt.Sprintf("threadwatch/%s (+https://github.com/jasondillingham/threadwatch)", version)
+	gh := github.NewClient(cfg.GitHubToken, ua)
+
+	// Poller — owns the background polling loop.
+	p := poller.New(db, gh, logger, metrics, cfg.PollInterval)
+
+	// HTTP.
+	srv, err := httpserver.New(db, logger, metrics, version, cfg.RefreshToken, p.Refresh)
 	if err != nil {
 		logger.Error("httpserver new", "err", err)
 		os.Exit(1)
@@ -90,6 +99,9 @@ func main() {
 			stop()
 		}
 	}()
+
+	// Poller runs in its own goroutine; cancellation propagates from ctx.
+	go p.Run(ctx)
 
 	<-ctx.Done()
 	logger.Info("shutdown requested")

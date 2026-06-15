@@ -32,10 +32,15 @@ jobs:
       - name: go test
         run: go test ./... -race -count=1
 
-      - name: helm lint
+      - name: helm setup
         uses: azure/setup-helm@v4.3.1
         with:
-          version: v3.16.2
+          version: v3.18.4
+        env:
+          # azure/setup-helm currently advertises Node 20; opt into the
+          # Node 24 runtime that becomes mandatory mid-June 2026.
+          FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
       - run: helm lint charts/threadwatch
 
       - name: helm template (sanity)

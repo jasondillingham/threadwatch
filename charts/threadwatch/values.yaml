@@ -77,6 +77,13 @@ log:
   level: info
   format: json
 
+github:
+  # If set, GITHUB_TOKEN is read from this Secret. Without a token the
+  # poller still works but is limited to GitHub's 60 req/hr unauthenticated
+  # quota.
+  existingSecret: ""
+  tokenKey: token
+
 # Application configuration. Rendered into a ConfigMap and mounted at
 # /etc/threadwatch/threads.yaml.
 config:
