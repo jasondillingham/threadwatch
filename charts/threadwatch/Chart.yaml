@@ -1,0 +1,16 @@
+apiVersion: v2
+name: threadwatch
+description: Self-hosted Kubernetes monitor for GitHub issues and PRs you care about
+type: application
+version: 0.1.0-alpha.1
+appVersion: "0.1.0-alpha.1"
+home: https://github.com/jasondillingham/threadwatch
+sources:
+  - https://github.com/jasondillingham/threadwatch
+maintainers:
+  - name: Jason Dillingham
+    url: https://github.com/jasondillingham
+keywords:
+  - github
+  - monitoring
+  - homelab

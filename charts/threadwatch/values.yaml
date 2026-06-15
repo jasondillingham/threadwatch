@@ -1,0 +1,78 @@
+# Default values for threadwatch.
+# This is a YAML-formatted file. See README.md for a guide to overriding.
+
+image:
+  repository: ghcr.io/jasondillingham/threadwatch
+  # Defaults to .Chart.AppVersion when empty.
+  tag: ""
+  pullPolicy: IfNotPresent
+
+# RWO PVC; deployment strategy is Recreate.
+replicaCount: 1
+
+# Resources tuned for the "watch a handful of threads" workload.
+resources:
+  requests:
+    cpu: 25m
+    memory: 32Mi
+  limits:
+    cpu: 200m
+    memory: 128Mi
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8080
+
+# NPM-fronted homelab is the default deployment topology, so chart-side
+# Ingress is off by default. Override values-traefik.yaml for the
+# Traefik + cert-manager alternative.
+ingress:
+  enabled: false
+  className: ""
+  host: threadwatch.local
+  annotations: {}
+  tls:
+    enabled: false
+    secretName: ""
+
+# /data PVC for SQLite (used in Checkpoint B).
+persistence:
+  enabled: true
+  storageClass: ""
+  size: 1Gi
+  accessModes:
+    - ReadWriteOnce
+  existingClaim: ""
+
+probes:
+  enabled: true
+  liveness:
+    path: /healthz
+    initialDelaySeconds: 5
+    periodSeconds: 30
+  readiness:
+    path: /readyz
+    initialDelaySeconds: 5
+    periodSeconds: 10
+
+containerSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 65532
+  runAsGroup: 65532
+  readOnlyRootFilesystem: true
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop: [ALL]
+
+podSecurityContext:
+  fsGroup: 65532
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+# Logging.
+log:
+  level: info
+  format: json

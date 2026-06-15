@@ -1,0 +1,19 @@
+threadwatch {{ .Chart.AppVersion }} is installed as release "{{ .Release.Name }}" in namespace "{{ .Release.Namespace }}".
+
+Service: {{ include "threadwatch.fullname" . }} ({{ .Values.service.type }}) on port {{ .Values.service.port }}.
+
+To verify the pod is healthy:
+
+  kubectl -n {{ .Release.Namespace }} rollout status deploy/{{ include "threadwatch.fullname" . }}
+
+To reach the UI locally:
+
+  kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "threadwatch.fullname" . }} 8080:{{ .Values.service.port }}
+  open http://localhost:8080/healthz
+
+{{- if not .Values.ingress.enabled }}
+
+Ingress is disabled in this release. The expected topology is an upstream
+proxy (e.g. NPM) targeting the ClusterIP service above. To enable the
+chart-managed Ingress, set ingress.enabled=true.
+{{- end }}
