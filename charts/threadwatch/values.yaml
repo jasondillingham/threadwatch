@@ -76,3 +76,26 @@ affinity: {}
 log:
   level: info
   format: json
+
+# Application configuration. Rendered into a ConfigMap and mounted at
+# /etc/threadwatch/threads.yaml.
+config:
+  pollInterval: 15m
+  # Each entry becomes one watched thread. Polling is per-thread.
+  threads:
+    - label: "Tailscale: kube/certs LE backoff"
+      owner: tailscale
+      repo: tailscale
+      number: 19938
+    - label: "Tailscale: Ingress label overflow"
+      owner: tailscale
+      repo: tailscale
+      number: 19404
+    - label: "cert-manager: DNS01 throttling"
+      owner: cert-manager
+      repo: cert-manager
+      number: 8776
+    - label: "Crossplane: RBAC timeout misclassification"
+      owner: crossplane
+      repo: crossplane
+      number: 7398

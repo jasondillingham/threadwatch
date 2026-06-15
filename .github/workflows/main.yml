@@ -19,9 +19,9 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
           cache: true
@@ -33,17 +33,20 @@ jobs:
         run: go test ./... -race -count=1
 
       - name: helm lint
-        uses: azure/setup-helm@v4
+        uses: azure/setup-helm@v4.3.1
         with:
           version: v3.16.2
       - run: helm lint charts/threadwatch
+
+      - name: helm template (sanity)
+        run: helm template threadwatch charts/threadwatch > /dev/null
 
   build-and-push:
     needs: test
     runs-on: ubuntu-latest
     if: github.event_name != 'pull_request'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: short sha
         id: sha

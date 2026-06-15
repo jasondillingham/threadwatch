@@ -1,0 +1,106 @@
+/*
+ * threadwatch CSS — Checkpoint B
+ *
+ * Hand-written subset of Tailwind utilities matching what the templates
+ * use. Will be replaced by generated output from the standalone Tailwind
+ * CLI in Checkpoint D polish; the class API stays the same so swapping
+ * is mechanical.
+ */
+
+*, *::before, *::after { box-sizing: border-box; border: 0 solid #e2e8f0; }
+
+html { -webkit-text-size-adjust: 100%; tab-size: 4; line-height: 1.5; }
+body { margin: 0; line-height: inherit; }
+a { color: inherit; text-decoration: none; }
+code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.875em; }
+
+/* layout */
+.min-h-screen { min-height: 100vh; }
+.mx-auto { margin-left: auto; margin-right: auto; }
+.max-w-5xl { max-width: 64rem; }
+.overflow-hidden { overflow: hidden; }
+
+/* flex */
+.flex { display: flex; }
+.inline-flex { display: inline-flex; }
+.items-center { align-items: center; }
+.items-baseline { align-items: baseline; }
+.justify-between { justify-content: space-between; }
+
+/* spacing — padding */
+.p-8 { padding: 2rem; }
+.px-1 { padding-left: 0.25rem; padding-right: 0.25rem; }
+.px-2 { padding-left: 0.5rem; padding-right: 0.5rem; }
+.px-4 { padding-left: 1rem; padding-right: 1rem; }
+.px-6 { padding-left: 1.5rem; padding-right: 1.5rem; }
+.py-0\.5 { padding-top: 0.125rem; padding-bottom: 0.125rem; }
+.py-3 { padding-top: 0.75rem; padding-bottom: 0.75rem; }
+.py-4 { padding-top: 1rem; padding-bottom: 1rem; }
+.py-8 { padding-top: 2rem; padding-bottom: 2rem; }
+.pb-8 { padding-bottom: 2rem; }
+.pt-4 { padding-top: 1rem; }
+
+/* spacing — margin */
+.mb-6 { margin-bottom: 1.5rem; }
+.mt-2 { margin-top: 0.5rem; }
+
+/* widths */
+.w-full { width: 100%; }
+
+/* typography */
+.text-xs    { font-size: 0.75rem;  line-height: 1rem; }
+.text-sm    { font-size: 0.875rem; line-height: 1.25rem; }
+.text-lg    { font-size: 1.125rem; line-height: 1.75rem; }
+.text-2xl   { font-size: 1.5rem;   line-height: 2rem; }
+.font-medium    { font-weight: 500; }
+.font-semibold  { font-weight: 600; }
+.font-mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.uppercase  { text-transform: uppercase; }
+.tracking-tight { letter-spacing: -0.025em; }
+.tracking-wide  { letter-spacing: 0.025em; }
+.text-left  { text-align: left; }
+.text-right { text-align: right; }
+.text-center { text-align: center; }
+.antialiased { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+
+/* colors — backgrounds */
+.bg-white       { background-color: #ffffff; }
+.bg-slate-50    { background-color: #f8fafc; }
+.bg-slate-100   { background-color: #f1f5f9; }
+.bg-green-100   { background-color: #dcfce7; }
+.bg-red-100     { background-color: #fee2e2; }
+.bg-purple-100  { background-color: #f3e8ff; }
+
+/* colors — text */
+.text-slate-400 { color: #94a3b8; }
+.text-slate-500 { color: #64748b; }
+.text-slate-600 { color: #475569; }
+.text-slate-800 { color: #1e293b; }
+.text-slate-900 { color: #0f172a; }
+.text-green-800 { color: #166534; }
+.text-red-800   { color: #991b1b; }
+.text-purple-800 { color: #6b21a8; }
+
+/* borders */
+.border        { border-width: 1px; }
+.border-b      { border-bottom-width: 1px; }
+.border-dashed { border-style: dashed; }
+.border-slate-200 { border-color: #e2e8f0; }
+.border-slate-300 { border-color: #cbd5e1; }
+
+/* radius */
+.rounded      { border-radius: 0.25rem; }
+.rounded-lg   { border-radius: 0.5rem; }
+.rounded-full { border-radius: 9999px; }
+
+/* shadow */
+.shadow-sm { box-shadow: 0 1px 2px 0 rgba(0,0,0,0.05); }
+
+/* tables — divide-y on table > tbody */
+.divide-y > * + * { border-top-width: 1px; }
+.divide-slate-200 > * + * { border-color: #e2e8f0; }
+table { border-collapse: separate; border-spacing: 0; }
+
+/* hover */
+.hover\:bg-slate-50:hover { background-color: #f8fafc; }
+.hover\:underline:hover { text-decoration: underline; }

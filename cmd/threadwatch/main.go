@@ -16,43 +16,76 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/jasondillingham/threadwatch/internal/config"
+	"github.com/jasondillingham/threadwatch/internal/httpserver"
 	"github.com/jasondillingham/threadwatch/internal/obs"
+	"github.com/jasondillingham/threadwatch/internal/storage"
+)
+
+// Build-time metadata, set via -ldflags.
+var (
+	version   = "dev"
+	commit    = "unknown"
+	buildDate = "unknown"
 )
 
 func main() {
 	logger := obs.NewLogger()
 
-	listen := envDefault("LISTEN_ADDR", ":8080")
+	cfg, err := config.Load()
+	if err != nil {
+		logger.Error("config load", "err", err)
+		os.Exit(1)
+	}
+	logger.Info("starting",
+		"version", version, "commit", commit, "build_date", buildDate,
+		"listen", cfg.ListenAddr, "db", cfg.DatabasePath,
+		"threads_config", cfg.ThreadsPath, "threads_declared", len(cfg.Threads),
+		"poll_interval", cfg.PollInterval,
+	)
 
-	mux := http.NewServeMux()
-	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) {
-		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-		_, _ = w.Write([]byte("ok\n"))
-	})
-	mux.HandleFunc("GET /readyz", func(w http.ResponseWriter, _ *http.Request) {
-		// Checkpoint A has no dependencies; once the DB and poller exist
-		// (Checkpoint B/C) this will check db reachability and last
-		// successful poll within 2 * pollInterval.
-		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-		_, _ = w.Write([]byte("ok\n"))
-	})
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
 
-	srv := &http.Server{
-		Addr:              listen,
-		Handler:           mux,
+	db, err := storage.Open(ctx, cfg.DatabasePath)
+	if err != nil {
+		logger.Error("storage open", "err", err)
+		os.Exit(1)
+	}
+	defer func() { _ = db.Close() }()
+
+	// Reconcile the declared threads with the DB. Idempotent.
+	for _, t := range cfg.Threads {
+		if _, err := db.UpsertThread(ctx, storage.Thread{
+			Label:  t.Label,
+			Owner:  t.Owner,
+			Repo:   t.Repo,
+			Number: t.Number,
+		}); err != nil {
+			logger.Error("upsert thread", "owner", t.Owner, "repo", t.Repo, "number", t.Number, "err", err)
+			os.Exit(1)
+		}
+	}
+	logger.Info("threads reconciled", "count", len(cfg.Threads))
+
+	srv, err := httpserver.New(db, logger, version)
+	if err != nil {
+		logger.Error("httpserver new", "err", err)
+		os.Exit(1)
+	}
+
+	httpSrv := &http.Server{
+		Addr:              cfg.ListenAddr,
+		Handler:           srv.Handler(),
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       15 * time.Second,
 		WriteTimeout:      15 * time.Second,
 		IdleTimeout:       60 * time.Second,
 	}
 
-	// Signal-handled shutdown.
-	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
-	defer stop()
-
 	go func() {
-		logger.Info("http listening", "addr", listen)
-		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		logger.Info("http listening", "addr", cfg.ListenAddr)
+		if err := httpSrv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			logger.Error("http server crashed", "err", err)
 			stop()
 		}
@@ -63,16 +96,9 @@ func main() {
 
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	if err := srv.Shutdown(shutdownCtx); err != nil {
+	if err := httpSrv.Shutdown(shutdownCtx); err != nil {
 		logger.Error("http shutdown failed", "err", err)
 		os.Exit(1)
 	}
 	logger.Info("shutdown complete")
-}
-
-func envDefault(key, def string) string {
-	if v := os.Getenv(key); v != "" {
-		return v
-	}
-	return def
 }

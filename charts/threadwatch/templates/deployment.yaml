@@ -43,6 +43,12 @@ spec:
               value: {{ .Values.log.level | quote }}
             - name: LOG_FORMAT
               value: {{ .Values.log.format | quote }}
+            - name: DATABASE_PATH
+              value: "/data/threadwatch.db"
+            - name: THREADS_CONFIG_PATH
+              value: "/etc/threadwatch/threads.yaml"
+            - name: POLL_INTERVAL
+              value: {{ .Values.config.pollInterval | quote }}
           {{- if .Values.probes.enabled }}
           livenessProbe:
             httpGet:
@@ -59,17 +65,26 @@ spec:
           {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
-          {{- if .Values.persistence.enabled }}
           volumeMounts:
+            {{- if .Values.persistence.enabled }}
             - name: data
               mountPath: /data
-          {{- end }}
-      {{- if .Values.persistence.enabled }}
+            {{- end }}
+            - name: threads
+              mountPath: /etc/threadwatch
+              readOnly: true
       volumes:
+        {{- if .Values.persistence.enabled }}
         - name: data
           persistentVolumeClaim:
             claimName: {{ include "threadwatch.pvcName" . }}
-      {{- end }}
+        {{- end }}
+        - name: threads
+          configMap:
+            name: {{ include "threadwatch.fullname" . }}-threads
+            items:
+              - key: threads.yaml
+                path: threads.yaml
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
