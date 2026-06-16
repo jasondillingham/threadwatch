@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
@@ -29,11 +30,19 @@ var (
 
 func main() {
 	logger := obs.NewLogger()
+	if err := run(logger); err != nil {
+		logger.Error("fatal", "err", err)
+		os.Exit(1)
+	}
+}
 
+// run wires up the application and blocks until shutdown. Returning an error
+// instead of calling os.Exit inline lets deferred cleanup (signal stop,
+// db.Close) actually run on the startup-failure paths.
+func run(logger *slog.Logger) error {
 	cfg, err := config.Load()
 	if err != nil {
-		logger.Error("config load", "err", err)
-		os.Exit(1)
+		return fmt.Errorf("config load: %w", err)
 	}
 	logger.Info("starting",
 		"version", version, "commit", commit, "build_date", buildDate,
@@ -50,8 +59,7 @@ func main() {
 	// Storage.
 	db, err := storage.Open(ctx, cfg.DatabasePath)
 	if err != nil {
-		logger.Error("storage open", "err", err)
-		os.Exit(1)
+		return fmt.Errorf("storage open: %w", err)
 	}
 	defer func() { _ = db.Close() }()
 
@@ -60,8 +68,7 @@ func main() {
 		if _, err := db.UpsertThread(ctx, storage.Thread{
 			Label: t.Label, Owner: t.Owner, Repo: t.Repo, Number: t.Number,
 		}); err != nil {
-			logger.Error("upsert thread", "owner", t.Owner, "repo", t.Repo, "number", t.Number, "err", err)
-			os.Exit(1)
+			return fmt.Errorf("upsert thread %s/%s#%d: %w", t.Owner, t.Repo, t.Number, err)
 		}
 	}
 	logger.Info("threads reconciled", "count", len(cfg.Threads))
@@ -79,8 +86,7 @@ func main() {
 	// HTTP.
 	srv, err := httpserver.New(db, logger, metrics, version, cfg.RefreshToken, p.Refresh)
 	if err != nil {
-		logger.Error("httpserver new", "err", err)
-		os.Exit(1)
+		return fmt.Errorf("httpserver new: %w", err)
 	}
 
 	httpSrv := &http.Server{
@@ -109,8 +115,8 @@ func main() {
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	if err := httpSrv.Shutdown(shutdownCtx); err != nil {
-		logger.Error("http shutdown failed", "err", err)
-		os.Exit(1)
+		return fmt.Errorf("http shutdown: %w", err)
 	}
 	logger.Info("shutdown complete")
+	return nil
 }

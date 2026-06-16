@@ -68,7 +68,7 @@ func (db *DB) ListThreads(ctx context.Context) ([]Thread, error) {
 	if err != nil {
 		return nil, fmt.Errorf("list threads: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var out []Thread
 	for rows.Next() {

@@ -44,7 +44,7 @@ func (db *DB) SeenIDs(ctx context.Context, threadID int64) (map[string]map[strin
 	if err != nil {
 		return nil, fmt.Errorf("seen ids: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	out := map[string]map[string]bool{}
 	for rows.Next() {
@@ -86,7 +86,7 @@ func (db *DB) InsertEventsIfNew(ctx context.Context, threadID int64, events []Ne
 	if err != nil {
 		return 0, fmt.Errorf("prepare events insert: %w", err)
 	}
-	defer stmt.Close()
+	defer func() { _ = stmt.Close() }()
 
 	var inserted int
 	for _, e := range events {
@@ -127,7 +127,7 @@ func (db *DB) ListEvents(ctx context.Context, threadID int64, limit int) ([]Even
 	if err != nil {
 		return nil, fmt.Errorf("list events: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var out []Event
 	for rows.Next() {
@@ -156,7 +156,7 @@ func (db *DB) ListEvents(ctx context.Context, threadID int64, limit int) ([]Even
 // LastEventAt is written when non-nil (the diff guarantees it doesn't
 // downgrade an existing timestamp), and skipped when nil.
 func (db *DB) ApplyThreadUpdate(ctx context.Context, threadID int64, state, title, kind string, lastEventAt *time.Time) error {
-	var lastEvent any = nil
+	var lastEvent any
 	if lastEventAt != nil {
 		lastEvent = lastEventAt.UTC().Format(time.RFC3339)
 	}

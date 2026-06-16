@@ -63,7 +63,9 @@ func Load() (Config, error) {
 }
 
 func loadThreadsFile(path string) ([]Thread, error) {
-	data, err := os.ReadFile(path)
+	// path is the operator-supplied THREADS_CONFIG_PATH (a trusted config
+	// location, not user input), so reading it by variable is intended.
+	data, err := os.ReadFile(path) //nolint:gosec // G304: trusted operator config path
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil, nil

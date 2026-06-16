@@ -23,7 +23,7 @@ func (db *DB) LoadETags(ctx context.Context, threadID int64) (map[string]string,
 	if err != nil {
 		return nil, fmt.Errorf("load etags: %w", err)
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	out := map[string]string{}
 	for rows.Next() {

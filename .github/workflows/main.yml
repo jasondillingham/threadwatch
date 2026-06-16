@@ -16,6 +16,23 @@ env:
   IMAGE: ghcr.io/${{ github.repository_owner }}/threadwatch
 
 jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          # The lint action manages its own build cache.
+          cache: false
+
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v9
+        with:
+          # v9 supports golangci-lint v2.x; pin to the minor we develop against.
+          version: v2.12
+
   test:
     runs-on: ubuntu-latest
     steps:
@@ -47,7 +64,7 @@ jobs:
         run: helm template threadwatch charts/threadwatch > /dev/null
 
   build-and-push:
-    needs: test
+    needs: [lint, test]
     runs-on: ubuntu-latest
     if: github.event_name != 'pull_request'
     steps:

@@ -3,9 +3,10 @@
 package obs
 
 import (
+	"net/http"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"net/http"
 )
 
 // Metrics owns threadwatch's Prometheus collectors and exposes both a

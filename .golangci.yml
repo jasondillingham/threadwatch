@@ -1,0 +1,41 @@
+# golangci-lint v2 config (schema version 2). See https://golangci-lint.run.
+version: "2"
+
+run:
+  timeout: 5m
+
+issues:
+  # Surface every finding — the defaults (max-same-issues: 3,
+  # max-issues-per-linter: 50) silently hide repeats, which reads as a
+  # clean gate when it isn't.
+  max-same-issues: 0
+  max-issues-per-linter: 0
+
+linters:
+  enable:
+    # errcheck, govet, staticcheck, ineffassign, unused are on by default in v2;
+    # listed here for an explicit, reviewable shipping set.
+    - errcheck
+    - govet
+    - staticcheck
+    - revive
+    - gosec
+    - gocritic
+    - unparam
+    - misspell
+    - nilerr
+    - wastedassign
+  exclusions:
+    generated: lax
+    rules:
+      # Test code trips gosec (e.g. hardcoded creds in fixtures) and errcheck
+      # (unchecked Close in defers) for non-issues.
+      - path: _test\.go
+        linters:
+          - gosec
+          - errcheck
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
