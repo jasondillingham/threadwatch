@@ -10,10 +10,14 @@ handful of open-source contributions in flight and wants to skip the daily
 
 ## Status
 
-Pre-alpha. **Checkpoint A** (boots, healthz, Helm chart) is wired up.
-**Checkpoint B** (SQLite storage, index page) and **Checkpoint C** (GitHub
-polling, event timeline) are next. See `docs/roadmap.md` for the walking
-skeleton sequence.
+Alpha. **Checkpoints A–C are complete** and running on k3s: it boots with
+`/healthz` + `/readyz`, stores thread state in SQLite, polls GitHub on a
+schedule (ETag conditional requests), and renders the event timeline alongside
+Prometheus metrics. A multi-arch image and Helm chart ship from CI.
+
+Hardening is in progress (lint / vulnerability scan / image signing / release
+plumbing — see `CHANGELOG.md`). The first tagged release (`v0.1.0`) and the
+OCI-published chart are pending.
 
 ## Why
 
