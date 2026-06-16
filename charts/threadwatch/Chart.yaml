@@ -2,8 +2,8 @@ apiVersion: v2
 name: threadwatch
 description: Self-hosted Kubernetes monitor for GitHub issues and PRs you care about
 type: application
-version: 0.1.0
-appVersion: "0.1.0"
+version: 0.1.1
+appVersion: "0.1.1"
 home: https://github.com/jasondillingham/threadwatch
 icon: https://raw.githubusercontent.com/jasondillingham/threadwatch/main/charts/threadwatch/icon.svg
 sources:

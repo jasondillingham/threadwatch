@@ -6,6 +6,8 @@ to follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-06-16
+
 ### Changed
 - GitHub client now retries transient failures (5xx and transport errors) with
   bounded exponential backoff, so flaky upstream gateway responses (e.g. 504s)
@@ -32,5 +34,6 @@ hardened CI/release pipeline. Running on k3s.
   GitHub Release.
 - Chart values-reference README and a chart icon.
 
-[Unreleased]: https://github.com/jasondillingham/threadwatch/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/jasondillingham/threadwatch/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/jasondillingham/threadwatch/releases/tag/v0.1.1
 [0.1.0]: https://github.com/jasondillingham/threadwatch/releases/tag/v0.1.0
