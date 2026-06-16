@@ -1,0 +1,105 @@
+name: release
+
+# Fires on version tags (e.g. v0.1.0). There is no branch-scoped dry-run for
+# tag triggers, so to test this workflow safely push a pre-release tag FIRST
+# (e.g. v0.0.1-rc.1) and confirm the whole chain — image tag rendered by the
+# chart, chart pulls, signature verifies — before cutting the real v0.1.0.
+#
+# FIRST-RELEASE MANUAL STEP: `helm push` creates a NEW ghcr package
+# (ghcr.io/<owner>/charts/threadwatch) which defaults to PRIVATE. After the
+# first run, flip it to Public in the GitHub package settings or `helm pull`
+# returns 401 even though the repo and image are public.
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write # create the GitHub Release
+  packages: write # push image + chart to ghcr
+  id-token: write # cosign keyless signing (Fulcio OIDC)
+
+env:
+  IMAGE: ghcr.io/${{ github.repository_owner }}/threadwatch
+  CHART_REPO: oci://ghcr.io/${{ github.repository_owner }}/charts
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      # Strip the leading v: tag v0.1.0 -> version 0.1.0. The image tag,
+      # chart version, and appVersion all use this stripped value so the
+      # chart's default (image.tag == .Chart.AppVersion) resolves to a tag
+      # this workflow actually pushes.
+      - name: version from tag
+        id: v
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      - name: short sha
+        id: sha
+        run: echo "short=$(echo ${{ github.sha }} | cut -c1-7)" >> "$GITHUB_OUTPUT"
+
+      - name: build date
+        id: date
+        run: echo "ts=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/build-push-action@v6
+        id: build
+        with:
+          context: .
+          push: true
+          platforms: linux/amd64,linux/arm64
+          provenance: false
+          build-args: |
+            VERSION=${{ steps.v.outputs.version }}
+            COMMIT=${{ steps.sha.outputs.short }}
+            BUILD_DATE=${{ steps.date.outputs.ts }}
+          tags: |
+            ${{ env.IMAGE }}:${{ steps.v.outputs.version }}
+            ${{ env.IMAGE }}:latest
+
+      # Scan the immutable digest before we sign or publish anything.
+      - name: trivy image scan
+        uses: aquasecurity/trivy-action@0.36.0
+        with:
+          image-ref: ${{ env.IMAGE }}@${{ steps.build.outputs.digest }}
+          scanners: vuln
+          severity: HIGH,CRITICAL
+          exit-code: "1"
+
+      - uses: sigstore/cosign-installer@v3
+
+      # Keyless: sign the digest (not a mutable tag) with the ambient OIDC token.
+      - name: cosign sign image
+        run: cosign sign --yes ${{ env.IMAGE }}@${{ steps.build.outputs.digest }}
+
+      - uses: azure/setup-helm@v4.3.1
+        with:
+          version: v3.18.4
+        env:
+          FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+      - name: package + push chart
+        run: |
+          helm registry login ghcr.io \
+            --username ${{ github.actor }} \
+            --password ${{ secrets.GITHUB_TOKEN }}
+          helm package charts/threadwatch \
+            --version ${{ steps.v.outputs.version }} \
+            --app-version ${{ steps.v.outputs.version }}
+          helm push threadwatch-${{ steps.v.outputs.version }}.tgz ${{ env.CHART_REPO }}
+
+      - name: create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
