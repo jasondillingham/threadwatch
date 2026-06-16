@@ -6,6 +6,11 @@ to follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+- GitHub client now retries transient failures (5xx and transport errors) with
+  bounded exponential backoff, so flaky upstream gateway responses (e.g. 504s)
+  no longer skip a poll cycle. Tunable via `MaxRetries` / `RetryBackoff`.
+
 ## [0.1.0] - 2026-06-16
 
 First release. A self-hosted GitHub thread monitor: it polls configured

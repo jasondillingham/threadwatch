@@ -35,6 +35,11 @@ type fakeResp struct {
 	// Override the X-RateLimit-* headers when non-zero.
 	rateRemaining int
 	rateReset     int64
+	// transientFails returns transientStatus (default 503) for the first N
+	// requests to this path before serving the canned response — models
+	// GitHub's flaky 5xx gateway responses.
+	transientFails  int
+	transientStatus int
 }
 
 func newServer(t *testing.T, routes *fakeRoutes) *httptest.Server {
@@ -57,6 +62,15 @@ func newServer(t *testing.T, routes *fakeRoutes) *httptest.Server {
 		if !ok {
 			t.Errorf("unexpected request to %s", key)
 			http.Error(w, "no canned response", http.StatusInternalServerError)
+			return
+		}
+
+		if resp.transientFails > 0 && routes.requestCounts[key] <= resp.transientFails {
+			code := resp.transientStatus
+			if code == 0 {
+				code = http.StatusServiceUnavailable
+			}
+			http.Error(w, "transient upstream failure", code)
 			return
 		}
 
@@ -422,4 +436,62 @@ func newServerWithCapture(t *testing.T, routes *fakeRoutes, mu *sync.Mutex, dst 
 	}))
 	t.Cleanup(srv.Close)
 	return srv
+}
+
+func TestFetchThread_RetriesTransient5xx(t *testing.T) {
+	t.Parallel()
+	routes := &fakeRoutes{
+		responses: map[string]fakeResp{
+			"/repos/o/r/issues/1": {
+				status:         200,
+				body:           `{"number":1,"state":"open","title":"T","html_url":"https://x","updated_at":"2026-01-02T00:00:00Z"}`,
+				transientFails: 2, // 503, 503, then 200
+			},
+			"/repos/o/r/issues/1/comments?per_page=100": {status: 200, body: `[]`},
+			"/repos/o/r/issues/1/events?per_page=100":   {status: 200, body: `[]`},
+		},
+	}
+	srv := newServer(t, routes)
+
+	c := github.NewClient("", "threadwatch/test")
+	c.BaseURL = srv.URL
+	c.RetryBackoff = time.Millisecond // keep the test fast
+
+	res, err := c.FetchThread(context.Background(), github.ThreadRef{Owner: "o", Repo: "r", Number: 1}, nil)
+	if err != nil {
+		t.Fatalf("FetchThread after transient 5xx: %v", err)
+	}
+	if res.Snapshot.Kind != "issue" || res.Snapshot.State != "open" {
+		t.Errorf("snapshot: got kind=%q state=%q", res.Snapshot.Kind, res.Snapshot.State)
+	}
+	if got := routes.requestCounts["/repos/o/r/issues/1"]; got != 3 {
+		t.Errorf("issue request count: got %d, want 3 (2 retries + success)", got)
+	}
+}
+
+func TestFetchThread_RetriesExhausted_ReturnsError(t *testing.T) {
+	t.Parallel()
+	routes := &fakeRoutes{
+		responses: map[string]fakeResp{
+			"/repos/o/r/issues/1": {
+				status:          200,
+				body:            `{"number":1}`,
+				transientFails:  99, // always fails
+				transientStatus: http.StatusGatewayTimeout,
+			},
+		},
+	}
+	srv := newServer(t, routes)
+
+	c := github.NewClient("", "threadwatch/test")
+	c.BaseURL = srv.URL
+	c.RetryBackoff = time.Millisecond
+
+	_, err := c.FetchThread(context.Background(), github.ThreadRef{Owner: "o", Repo: "r", Number: 1}, nil)
+	if err == nil {
+		t.Fatal("FetchThread: want error after retries exhausted, got nil")
+	}
+	if got := routes.requestCounts["/repos/o/r/issues/1"]; got != 3 {
+		t.Errorf("issue request count: got %d, want 3 (MaxRetries=2 + initial attempt)", got)
+	}
 }
