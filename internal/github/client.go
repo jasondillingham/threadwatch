@@ -31,15 +31,26 @@ type Client struct {
 	UserAgent  string
 	Token      string // optional; empty triggers 60 req/hr unauthenticated limit
 	HTTPClient *http.Client
+
+	// MaxRetries is the number of additional attempts on a transient failure
+	// (5xx or transport error). 0 disables retries (single attempt).
+	MaxRetries int
+	// RetryBackoff is the base delay before the first retry; it doubles each
+	// subsequent retry (capped at maxRetryBackoff).
+	RetryBackoff time.Duration
 }
+
+const maxRetryBackoff = 30 * time.Second
 
 // NewClient returns a Client with sensible defaults. token may be empty.
 func NewClient(token, userAgent string) *Client {
 	return &Client{
-		BaseURL:    DefaultBaseURL,
-		UserAgent:  userAgent,
-		Token:      token,
-		HTTPClient: &http.Client{Timeout: 30 * time.Second},
+		BaseURL:      DefaultBaseURL,
+		UserAgent:    userAgent,
+		Token:        token,
+		HTTPClient:   &http.Client{Timeout: 30 * time.Second},
+		MaxRetries:   2,
+		RetryBackoff: 500 * time.Millisecond,
 	}
 }
 
@@ -70,10 +81,64 @@ var (
 	ErrRateLimited  = errors.New("github: rate limited")
 )
 
-// get issues a conditional GET against the given relative path, honoring
-// the supplied ETag (sent as If-None-Match when non-empty). The path must
-// begin with a leading slash.
+// get issues a conditional GET, retrying transient failures (5xx and
+// transport errors) with exponential backoff. GETs are idempotent, so a
+// retry is always safe. Definitive responses (2xx/304/404/401/403/429) and
+// context cancellation are returned immediately.
 func (c *Client) get(ctx context.Context, path, etag string) (Response, error) {
+	attempts := c.MaxRetries + 1
+	if attempts < 1 {
+		attempts = 1
+	}
+	var (
+		r   Response
+		err error
+	)
+	for i := 0; i < attempts; i++ {
+		if i > 0 {
+			timer := time.NewTimer(c.backoffFor(i))
+			select {
+			case <-ctx.Done():
+				timer.Stop()
+				return r, ctx.Err()
+			case <-timer.C:
+			}
+		}
+		r, err = c.doGet(ctx, path, etag)
+		if !shouldRetry(r, err) {
+			return r, err
+		}
+	}
+	return r, err // retries exhausted; surface the last transient failure
+}
+
+// shouldRetry reports whether a (response, error) pair is a transient failure
+// worth retrying: any 5xx, or a transport-level error (no HTTP status). The
+// 4xx sentinels (not-found/unauthorized/rate-limited) are definitive.
+func shouldRetry(r Response, err error) bool {
+	if err == nil {
+		return false
+	}
+	if r.StatusCode == 0 {
+		return true // transport error or client timeout — no response received
+	}
+	return r.StatusCode >= 500 && r.StatusCode <= 599
+}
+
+// backoffFor returns the delay before retry attempt i (1-based): base * 2^(i-1),
+// capped at maxRetryBackoff.
+func (c *Client) backoffFor(i int) time.Duration {
+	d := c.RetryBackoff << (i - 1)
+	if d <= 0 || d > maxRetryBackoff {
+		return maxRetryBackoff
+	}
+	return d
+}
+
+// doGet performs a single conditional GET against the given relative path,
+// honoring the supplied ETag (sent as If-None-Match when non-empty). The path
+// must begin with a leading slash.
+func (c *Client) doGet(ctx context.Context, path, etag string) (Response, error) {
 	if c.HTTPClient == nil {
 		c.HTTPClient = http.DefaultClient
 	}
