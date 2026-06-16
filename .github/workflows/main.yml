@@ -63,8 +63,24 @@ jobs:
       - name: helm template (sanity)
         run: helm template threadwatch charts/threadwatch > /dev/null
 
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      # Filesystem scan: Go deps (go.mod), Dockerfile + Helm misconfig, secrets.
+      # Runs on PRs too, so dependency/config CVEs gate before merge.
+      - name: trivy filesystem scan
+        uses: aquasecurity/trivy-action@0.36.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: vuln,misconfig,secret
+          severity: HIGH,CRITICAL
+          exit-code: "1"
+
   build-and-push:
-    needs: [lint, test]
+    needs: [lint, test, security]
     runs-on: ubuntu-latest
     if: github.event_name != 'pull_request'
     steps:
@@ -99,3 +115,14 @@ jobs:
           tags: |
             ${{ env.IMAGE }}:main
             ${{ env.IMAGE }}:sha-${{ steps.sha.outputs.short }}
+
+      # Image scan runs AFTER push: multi-arch buildx images can't be loaded
+      # locally to scan pre-push. A HIGH/CRITICAL fails the job (alert + block
+      # any release built on it); the tag exists in the registry but is flagged.
+      - name: trivy image scan
+        uses: aquasecurity/trivy-action@0.36.0
+        with:
+          image-ref: ${{ env.IMAGE }}:sha-${{ steps.sha.outputs.short }}
+          scanners: vuln
+          severity: HIGH,CRITICAL
+          exit-code: "1"
