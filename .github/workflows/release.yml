@@ -103,3 +103,5 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           generate_release_notes: true
+          # Any tag with a hyphen (v0.1.0-rc.1, -alpha, -beta) is a pre-release.
+          prerelease: ${{ contains(github.ref_name, '-') }}
