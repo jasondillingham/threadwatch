@@ -71,7 +71,7 @@ jobs:
       # Filesystem scan: Go deps (go.mod), Dockerfile + Helm misconfig, secrets.
       # Runs on PRs too, so dependency/config CVEs gate before merge.
       - name: trivy filesystem scan
-        uses: aquasecurity/trivy-action@0.36.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           scan-type: fs
           scan-ref: .
@@ -120,7 +120,7 @@ jobs:
       # locally to scan pre-push. A HIGH/CRITICAL fails the job (alert + block
       # any release built on it); the tag exists in the registry but is flagged.
       - name: trivy image scan
-        uses: aquasecurity/trivy-action@0.36.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: ${{ env.IMAGE }}:sha-${{ steps.sha.outputs.short }}
           scanners: vuln

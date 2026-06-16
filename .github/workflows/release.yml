@@ -70,7 +70,7 @@ jobs:
 
       # Scan the immutable digest before we sign or publish anything.
       - name: trivy image scan
-        uses: aquasecurity/trivy-action@0.36.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: ${{ env.IMAGE }}@${{ steps.build.outputs.digest }}
           scanners: vuln
