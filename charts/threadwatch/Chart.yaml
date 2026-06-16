@@ -5,6 +5,7 @@ type: application
 version: 0.1.0-alpha.1
 appVersion: "0.1.0-alpha.1"
 home: https://github.com/jasondillingham/threadwatch
+icon: https://raw.githubusercontent.com/jasondillingham/threadwatch/main/charts/threadwatch/icon.svg
 sources:
   - https://github.com/jasondillingham/threadwatch
 maintainers:
