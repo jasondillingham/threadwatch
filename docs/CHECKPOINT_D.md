@@ -18,6 +18,45 @@ and is structured so a future session can resume cold.
 | Tag | None. Untagged on `main` |
 | Chart published | No. Only present in repo at `charts/threadwatch/` |
 
+## Progress update — 2026-06-16
+
+Worked on branch `checkpoint-d/supply-chain` (threadwatch) + `feat/headlamp-dashboard`
+(homelab k8s). All commits are local — **not yet pushed**; Jason pushes.
+
+| Item | Status |
+|---|---|
+| 1.1 GitHub PAT | **Wrapper built, blocked on Jason.** Uses ESO+Bitwarden (homelab standard), not raw `kubectl create secret`. Files at `~/Documents/Homelab/k8s/threadwatch/`. Needs: mint fine-grained public-repo-read PAT → store in Bitwarden as `threadwatch_GITHUB_TOKEN` → paste the item UUID → fill `01-externalsecret.yaml` `remoteRef.key` → `./deploy.sh` → verify `github_token_set=true` + `rate_limit_remaining≈4990`. |
+| 1.2 GitOps wrapper | ✅ **Done** (built as the home for 1.1's ExternalSecret). `k8s/threadwatch/`: README, values.yaml (pins `sha-4a6ed1c`, `github.existingSecret`), deploy.sh, 01-externalsecret.yaml. Uncommitted in the private homelab repo. |
+| 1.3 NPM proxy | ⏳ Pending (Jason — NPM admin UI). Note: cluster already serves `*.k8s.dillinghamhouse.com` via traefik+VIP 10.66.0.160, so a traefik Ingress is an alternative to an NPM hop. |
+| 2.4 golangci-lint | ✅ **Done.** `.golangci.yml` is **v2 schema** (repo's golangci-lint is v2.12.2 — the doc's v1 assumption was wrong); action is `golangci-lint-action@v9` (v6 only supports v1). Fixed all 17 findings incl. a `run() error` refactor of `cmd/threadwatch`. `max-same-issues: 0` so CI never hides repeats. |
+| 2.5 Trivy | ✅ **Done.** `security` job (`trivy fs`) gates build; `trivy image` scans the pushed digest. Both verified locally = 0 HIGH/CRITICAL. |
+| 2.6 cosign | ✅ **Done** (in release.yml — signs the immutable digest, keyless OIDC). |
+| 2.7 release.yml | ✅ **Workflow done.** Build→scan→cosign→OCI chart push→GitHub release on `v*` tags. ⏳ First tag is Jason's: push `v0.0.1-rc.1` to dry-run the chain first (tag triggers have no branch dry-run), then `v0.1.0`. **Caught + fixed a real bug:** the chart's `image.tag` defaults to `.Chart.AppVersion`, so the image must be tagged with the v-stripped version or the published chart `ImagePullBackOff`s for installers (invisible locally because the homelab wrapper pins `sha-`). |
+| 3.8 screenshots + diagram | Diagram ✅ (Mermaid in README). ⏳ Screenshots are Jason's (need a browser): `kubectl -n threadwatch port-forward deploy/threadwatch 8080:8080`, capture index + thread pages into `docs/screenshots/`. |
+| 3.9 chart README | ✅ **Done** — full values table. |
+| 3.10 CHANGELOG | ✅ **Done** — Unreleased + 0.1.0-alpha.1 backfill. |
+| 3.11 CONTRIBUTING | ✅ **Done** — DCO, make-based dev loop, conventions. |
+| 3.12 chart icon | ✅ **Done** — `icon.svg` + `Chart.yaml`; clears the helm-lint INFO. |
+
+**Bonus:** corrected the stale README Status (claimed Checkpoint A "wired"/B-C "next" — all done & deployed).
+
+**After the first release tag (one-time, Jason, web UI):** flip the new
+`ghcr.io/jasondillingham/charts/threadwatch` package to **Public** (defaults
+private → 401 on `helm pull`). The **image** package is already public; the
+chart package doesn't exist until `helm push` runs. The published chart
+contains only already-public repo files (no PAT, no homelab specifics — those
+live in the private `k8s/threadwatch/` wrapper / runtime Secrets).
+
+**Follow-up #13 — intermittent GitHub 504s.** Logs show occasional 504
+"Hello future GitHubber" HTML responses on fetches; that's GitHub's own gateway
+hiccup, distinct from the rate limit. Re-check after the PAT lands; if it
+persists, add retry/backoff in `internal/github`. Not a V1 blocker.
+
+**Adjacent:** Headlamp cluster dashboard deployed this session (homelab
+`feat/headlamp-dashboard`) at `https://headlamp.k8s.dillinghamhouse.com` —
+read-only by default, `edit`-role on-demand elevation. Unrelated to threadwatch
+but done in the same session.
+
 ## Test status
 
 | Package | Coverage |

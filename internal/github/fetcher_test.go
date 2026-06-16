@@ -168,10 +168,10 @@ func TestFetchThread_PullRequest_FetchesReviewEndpoints(t *testing.T) {
 					"pull_request": {"merged_at": null}
 				}`,
 			},
-			"/repos/o/r/issues/2/comments?per_page=100":       {status: 200, body: `[]`},
-			"/repos/o/r/issues/2/events?per_page=100":         {status: 200, body: `[]`},
-			"/repos/o/r/pulls/2/reviews?per_page=100":         {status: 200, body: `[{"id": 10, "user": {"login": "rev"}, "state": "APPROVED", "body": "lgtm", "html_url": "https://rev", "submitted_at": "2026-01-05T00:00:00Z"}]`},
-			"/repos/o/r/pulls/2/comments?per_page=100":        {status: 200, body: `[{"id": 100, "user": {"login": "rev"}, "body": "nit", "html_url": "https://rc", "created_at": "2026-01-06T00:00:00Z"}]`},
+			"/repos/o/r/issues/2/comments?per_page=100": {status: 200, body: `[]`},
+			"/repos/o/r/issues/2/events?per_page=100":   {status: 200, body: `[]`},
+			"/repos/o/r/pulls/2/reviews?per_page=100":   {status: 200, body: `[{"id": 10, "user": {"login": "rev"}, "state": "APPROVED", "body": "lgtm", "html_url": "https://rev", "submitted_at": "2026-01-05T00:00:00Z"}]`},
+			"/repos/o/r/pulls/2/comments?per_page=100":  {status: 200, body: `[{"id": 100, "user": {"login": "rev"}, "body": "nit", "html_url": "https://rc", "created_at": "2026-01-06T00:00:00Z"}]`},
 		},
 	}
 	srv := newServer(t, routes)
@@ -216,10 +216,10 @@ func TestFetchThread_MergedPR_StateDerivedFromMergedAt(t *testing.T) {
 					"pull_request": {"merged_at": "2026-01-02T00:00:00Z"}
 				}`,
 			},
-			"/repos/o/r/issues/3/comments?per_page=100":      {status: 200, body: `[]`},
-			"/repos/o/r/issues/3/events?per_page=100":        {status: 200, body: `[]`},
-			"/repos/o/r/pulls/3/reviews?per_page=100":        {status: 200, body: `[]`},
-			"/repos/o/r/pulls/3/comments?per_page=100":       {status: 200, body: `[]`},
+			"/repos/o/r/issues/3/comments?per_page=100": {status: 200, body: `[]`},
+			"/repos/o/r/issues/3/events?per_page=100":   {status: 200, body: `[]`},
+			"/repos/o/r/pulls/3/reviews?per_page=100":   {status: 200, body: `[]`},
+			"/repos/o/r/pulls/3/comments?per_page=100":  {status: 200, body: `[]`},
 		},
 	}
 	srv := newServer(t, routes)

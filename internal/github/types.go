@@ -13,8 +13,8 @@ type ThreadSnapshot struct {
 	Owner     string
 	Repo      string
 	Number    int
-	Kind      string    // "issue" or "pr"
-	State     string    // "open" | "closed" | "merged"
+	Kind      string // "issue" or "pr"
+	State     string // "open" | "closed" | "merged"
 	Title     string
 	URL       string
 	UpdatedAt time.Time // from /issues/{n}.updated_at

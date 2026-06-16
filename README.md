@@ -10,10 +10,14 @@ handful of open-source contributions in flight and wants to skip the daily
 
 ## Status
 
-Pre-alpha. **Checkpoint A** (boots, healthz, Helm chart) is wired up.
-**Checkpoint B** (SQLite storage, index page) and **Checkpoint C** (GitHub
-polling, event timeline) are next. See `docs/roadmap.md` for the walking
-skeleton sequence.
+Alpha. **Checkpoints A–C are complete** and running on k3s: it boots with
+`/healthz` + `/readyz`, stores thread state in SQLite, polls GitHub on a
+schedule (ETag conditional requests), and renders the event timeline alongside
+Prometheus metrics. A multi-arch image and Helm chart ship from CI.
+
+Hardening is in progress (lint / vulnerability scan / image signing / release
+plumbing — see `CHANGELOG.md`). The first tagged release (`v0.1.0`) and the
+OCI-published chart are pending.
 
 ## Why
 
@@ -22,6 +26,29 @@ skeleton sequence.
   skip the empty days entirely.
 - Surfacing activity in one place beats per-repo notifications when you only
   care about the threads you're personally engaged in.
+
+## Architecture
+
+```mermaid
+flowchart LR
+    subgraph config
+      env[env vars]
+      threads[threads.yaml]
+    end
+    config --> poller[poller loop]
+    poller -->|per thread| github[github fetcher: ETag conditional GET]
+    github --> diff[poller.Diff: correctness core]
+    diff -->|new events| storage[(SQLite)]
+    storage --> http[httpserver: web UI + /metrics]
+    http -.->|refresh channel| poller
+```
+
+The poller drives everything on a timer (and on demand via the refresh
+channel): for each watched thread it fetches from GitHub with conditional
+requests, diffs the result against stored state, and persists only the new
+events. The HTTP server reads that state for the UI and exposes metrics.
+
+<!-- Screenshots live in docs/screenshots/ — see that directory's README. -->
 
 ## Quick start (when V1 is shipped)
 

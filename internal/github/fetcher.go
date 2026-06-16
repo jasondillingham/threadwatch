@@ -89,7 +89,7 @@ func (c *Client) FetchThread(ctx context.Context, ref ThreadRef, prevETags map[s
 	// 2. /issues/{n}/comments
 	if err := c.fetchInto(ctx, fmt.Sprintf("%s/comments?per_page=100", issuePath),
 		EndpointComments, prevETags, &out, &out.Snapshot.Comments,
-		func(raw []rawComment) []Comment { return liftComments(raw) },
+		liftComments,
 	); err != nil {
 		return out, fmt.Errorf("comments: %w", err)
 	}
@@ -97,7 +97,7 @@ func (c *Client) FetchThread(ctx context.Context, ref ThreadRef, prevETags map[s
 	// 3. /issues/{n}/events
 	if err := c.fetchInto(ctx, fmt.Sprintf("%s/events?per_page=100", issuePath),
 		EndpointIssueEvents, prevETags, &out, &out.Snapshot.IssueEvents,
-		func(raw []rawIssueEvent) []IssueEvent { return liftIssueEvents(raw) },
+		liftIssueEvents,
 	); err != nil {
 		return out, fmt.Errorf("issue_events: %w", err)
 	}
@@ -108,14 +108,14 @@ func (c *Client) FetchThread(ctx context.Context, ref ThreadRef, prevETags map[s
 
 		if err := c.fetchInto(ctx, fmt.Sprintf("%s/reviews?per_page=100", pullsPath),
 			EndpointReviews, prevETags, &out, &out.Snapshot.Reviews,
-			func(raw []rawReview) []Review { return liftReviews(raw) },
+			liftReviews,
 		); err != nil {
 			return out, fmt.Errorf("reviews: %w", err)
 		}
 
 		if err := c.fetchInto(ctx, fmt.Sprintf("%s/comments?per_page=100", pullsPath),
 			EndpointReviewComments, prevETags, &out, &out.Snapshot.ReviewComments,
-			func(raw []rawReviewComment) []ReviewComment { return liftReviewComments(raw) },
+			liftReviewComments,
 		); err != nil {
 			return out, fmt.Errorf("review_comments: %w", err)
 		}
@@ -130,8 +130,8 @@ func (c *Client) FetchThread(ctx context.Context, ref ThreadRef, prevETags map[s
 // poller's diff will see "no items" and emit zero events for that
 // endpoint, which is the correct behaviour.
 func fetchInto[Raw any, Lifted any](
-	c *Client,
 	ctx context.Context,
+	c *Client,
 	path, endpoint string,
 	prevETags map[string]string,
 	out *FetchResult,
@@ -178,16 +178,16 @@ func (c *Client) fetchInto(
 	switch dst := dstAny.(type) {
 	case *[]Comment:
 		lift := liftAny.(func([]rawComment) []Comment)
-		return fetchInto(c, ctx, path, endpoint, prevETags, out, dst, lift)
+		return fetchInto(ctx, c, path, endpoint, prevETags, out, dst, lift)
 	case *[]Review:
 		lift := liftAny.(func([]rawReview) []Review)
-		return fetchInto(c, ctx, path, endpoint, prevETags, out, dst, lift)
+		return fetchInto(ctx, c, path, endpoint, prevETags, out, dst, lift)
 	case *[]ReviewComment:
 		lift := liftAny.(func([]rawReviewComment) []ReviewComment)
-		return fetchInto(c, ctx, path, endpoint, prevETags, out, dst, lift)
+		return fetchInto(ctx, c, path, endpoint, prevETags, out, dst, lift)
 	case *[]IssueEvent:
 		lift := liftAny.(func([]rawIssueEvent) []IssueEvent)
-		return fetchInto(c, ctx, path, endpoint, prevETags, out, dst, lift)
+		return fetchInto(ctx, c, path, endpoint, prevETags, out, dst, lift)
 	default:
 		return fmt.Errorf("fetchInto: unsupported dst type %T", dstAny)
 	}

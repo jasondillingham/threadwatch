@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" role="img" aria-label="threadwatch">
+  <rect width="256" height="256" rx="48" fill="#1f2937"/>
+  <g stroke="#94a3b8" stroke-width="14" stroke-linecap="round">
+    <line x1="72" y1="88" x2="184" y2="88"/>
+    <line x1="72" y1="128" x2="184" y2="128"/>
+    <line x1="72" y1="168" x2="148" y2="168"/>
+  </g>
+  <circle cx="184" cy="168" r="22" fill="#22c55e"/>
+</svg>
