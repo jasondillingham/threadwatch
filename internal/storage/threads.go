@@ -82,8 +82,7 @@ func (db *DB) ListThreads(ctx context.Context) ([]Thread, error) {
 			return nil, err
 		}
 		if lastEvent.Valid {
-			tm, parseErr := time.Parse(time.DateTime, lastEvent.String)
-			if parseErr == nil {
+			if tm, ok := parseDBTime(lastEvent.String); ok {
 				t.LastEventAt = &tm
 			}
 		}
@@ -119,8 +118,7 @@ func (db *DB) GetThread(ctx context.Context, id int64) (Thread, error) {
 		return Thread{}, err
 	}
 	if lastEvent.Valid {
-		tm, parseErr := time.Parse(time.DateTime, lastEvent.String)
-		if parseErr == nil {
+		if tm, ok := parseDBTime(lastEvent.String); ok {
 			t.LastEventAt = &tm
 		}
 	}
@@ -149,8 +147,20 @@ func defaultState(s string) string {
 }
 
 func parseSQLiteTime(s string) time.Time {
-	if t, err := time.Parse(time.DateTime, s); err == nil {
-		return t
+	t, _ := parseDBTime(s)
+	return t
+}
+
+// parseDBTime parses a timestamp string stored by SQLite. datetime('now')
+// yields time.DateTime ("2006-01-02 15:04:05"); accept RFC3339 too so a
+// writer/reader format mismatch never silently drops a value (it did for
+// last_event_at — ApplyThreadUpdate wrote RFC3339 while readers expected
+// DateTime, so the "days quiet" column was always empty).
+func parseDBTime(s string) (time.Time, bool) {
+	for _, layout := range []string{time.DateTime, time.RFC3339} {
+		if t, err := time.Parse(layout, s); err == nil {
+			return t, true
+		}
 	}
-	return time.Time{}
+	return time.Time{}, false
 }
