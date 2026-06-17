@@ -158,7 +158,10 @@ func (db *DB) ListEvents(ctx context.Context, threadID int64, limit int) ([]Even
 func (db *DB) ApplyThreadUpdate(ctx context.Context, threadID int64, state, title, kind string, lastEventAt *time.Time) error {
 	var lastEvent any
 	if lastEventAt != nil {
-		lastEvent = lastEventAt.UTC().Format(time.RFC3339)
+		// Match the readers (GetThread/ListThreads) and the datetime('now')
+		// convention used for created_at/updated_at; RFC3339 here failed to
+		// parse on read and silently dropped the timestamp.
+		lastEvent = lastEventAt.UTC().Format(time.DateTime)
 	}
 	const q = `
 		UPDATE threads SET

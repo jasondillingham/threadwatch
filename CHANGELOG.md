@@ -6,6 +6,16 @@ to follow [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+- `last_event_at` round-trip: `ApplyThreadUpdate` wrote the timestamp as RFC3339
+  while the readers parsed SQLite `datetime` format, so it silently dropped to
+  `nil` and the UI's "days quiet" column always showed "never". Aligned the
+  write format and made the reader accept both layouts (heals existing rows).
+
+### Added
+- Unit tests for `internal/storage` — dedup core, upsert idempotency, list
+  ordering, thread-update no-downgrade, ETag round-trip (0% → ~77% coverage).
+
 ## [0.1.1] - 2026-06-16
 
 ### Changed
